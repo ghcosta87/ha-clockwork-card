@@ -2,124 +2,128 @@
 // https://github.com/robmarkoski/ha-clockwork-card
 
 class ClockWorkCard extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({
-            mode: 'open'
-        });
+  constructor() {
+    super();
+    this.attachShadow({
+      mode: "open",
+    });
+  }
+
+  /* This is called every time sensor is updated */
+  set hass(hass) {
+    const config = this.config;
+    const locale = config.locale;
+    const _locale = locale ? locale : undefined;
+    var _other_timezones = config.other_time;
+
+    const entityId = config.entity;
+
+    // Need to check for safari as safari dates are parsed as being UTC when not specified.
+    // Therefore all dates are adjusted
+    //var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    if (entityId) {
+      const state = hass.states[entityId];
+      const stateStr = state ? state.state : "Unavailable";
+      if (stateStr == "Unavailable") {
+        throw new Error("Sensor State Unavailable");
+      }
+      // if (isSafari) {
+      //     var _stateStr_utc = new Date(stateStr).toLocaleString(locale, {timeZone: "Etc/UTC"});
+      //     var _date_time = new Date(_stateStr_utc);
+      // } else {
+      //     var _date_time = new Date(stateStr);
+      // }
+      var _date_time = new Date(stateStr);
+    } else {
+      var _date_time = new Date();
     }
 
-    /* This is called every time sensor is updated */
-    set hass(hass) {
+    if (_date_time == "Invalid Date") {
+      throw new Error("Invalid date. Ensure its a ISO Date");
+    }
 
-        const config = this.config;
-        const locale = config.locale;
-        const _locale = locale ? locale : undefined;
-        var _other_timezones = config.other_time;
-        
-        const entityId = config.entity;
+    //Format the Time
+    var _time = _date_time.toLocaleTimeString(_locale, {
+      hour: "numeric",
+      minute: "numeric",
+    });
 
-        // Need to check for safari as safari dates are parsed as being UTC when not specified.
-        // Therefore all dates are adjusted
-        //var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (_time == "Invalid Time") throw new Error("_time has a invalid value: "+_date_time.toLocaleTimeString());
 
-        if (entityId) {
-            const state = hass.states[entityId];
-            const stateStr = state ? state.state : "Unavailable";
-            if (stateStr == "Unavailable") {
-                throw new Error("Sensor State Unavailable");
-            }
-            // if (isSafari) {
-            //     var _stateStr_utc = new Date(stateStr).toLocaleString(locale, {timeZone: "Etc/UTC"});
-            //     var _date_time = new Date(_stateStr_utc);
-            // } else {
-            //     var _date_time = new Date(stateStr);
-            // }
-            var _date_time = new Date(stateStr);
-        } else {
-            var _date_time = new Date();
-        }
+    //Format the Date
+    var _date = _date_time.toLocaleDateString(_locale, {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
 
+    if (_time == "Invalid Date") throw new Error("_date has a invalid value: "+_date_time.toLocaleTimeString());
 
-
-        
-        if (_date_time == "Invalid Date") {
-            throw new Error("Invalid date. Ensure its a ISO Date")
-        }
-        
-        //Format the Time
-        var _time = _date_time.toLocaleTimeString(_locale, {
-            hour: 'numeric',
-            minute: 'numeric'
-        });
-
-        //Format the Date
-        var _date = _date_time.toLocaleDateString(_locale, {
-            weekday : 'long',
-            day : 'numeric',
-            month : 'long'
-        });
-
-        //Build List of Other Timezones
-        //
-        var otherclocks = `
+    //Build List of Other Timezones
+    //
+    var otherclocks = `
             <div class = "other_clocks">
             `;
-        var i;
-        var j = _other_timezones.length; //TODO: Recommend max 3.
-        for (i= 0; i < j; i++) {
-            //Format other timezones.
-            var _tztime = _date_time.toLocaleTimeString(_locale, {
-                hour: 'numeric',
-                minute: 'numeric',
-                timeZone: _other_timezones[i],
-                weekday: 'short'
-            }); 
-            
-            // List other Timezones.
-            otherclocks = otherclocks + `
+    var i;
+    var j = _other_timezones.length; //TODO: Recommend max 3.
+    for (i = 0; i < j; i++) {
+      //Format other timezones.
+      var _tztime = _date_time.toLocaleTimeString(_locale, {
+        hour: "numeric",
+        minute: "numeric",
+        timeZone: _other_timezones[i],
+        weekday: "short",
+      });
+
+      // List other Timezones.
+      otherclocks =
+        otherclocks +
+        `
                 <div class="tz_locale">${_other_timezones[i]} </div> 
                 <div class="otime"> ${_tztime} </div>
             `;
-            //console.log(_tztime);
-        };
-        otherclocks = otherclocks + `
+      //console.log(_tztime);
+    }
+    otherclocks =
+      otherclocks +
+      `
             </div>
             `;
-        /*console.log(otherclocks);*/
+    /*console.log(otherclocks);*/
 
-        // Build Current Local Time
-        var local_time = `
+    // Build Current Local Time
+    var local_time = `
             <div class="clock">
                 <div class="time" id="time">${_time}</div>
                 <div class="date" id="date">${_date}</div>
             </div>
         `;
-        
-        var clock_contents = local_time + otherclocks;
-       /* console.log("Clock Contents: " + clock_contents);*/
-        
-       this.shadowRoot.getElementById('container').innerHTML = clock_contents;
-    }
 
-    /* This is called only when config is updated */
-    setConfig(config) {
-        // TODO: Add some more error checking.
-        // if (!config.entity) {
-        //     throw new Error('You must define an entity')
-        // }
-        
-        /*console.log(_other_timezones);*/
-        const root = this.shadowRoot;
-        if (root.lastChild) root.removeChild(root.lastChild);
+    var clock_contents = local_time + otherclocks;
+    /* console.log("Clock Contents: " + clock_contents);*/
 
-        this.config = config;
+    this.shadowRoot.getElementById("container").innerHTML = clock_contents;
+  }
 
-        const card = document.createElement('ha-card');
-        const content = document.createElement('div');
-        const style = document.createElement('style')
-  
-        style.textContent = `
+  /* This is called only when config is updated */
+  setConfig(config) {
+    // TODO: Add some more error checking.
+    // if (!config.entity) {
+    //     throw new Error('You must define an entity')
+    // }
+
+    /*console.log(_other_timezones);*/
+    const root = this.shadowRoot;
+    if (root.lastChild) root.removeChild(root.lastChild);
+
+    this.config = config;
+
+    const card = document.createElement("ha-card");
+    const content = document.createElement("div");
+    const style = document.createElement("style");
+
+    style.textContent = `
             .container {
                 padding: 5px 5px 5px;
                 display:flex;
@@ -173,20 +177,20 @@ class ClockWorkCard extends HTMLElement {
                 text-rendering: var(--paper-font-common-expensive-kerning_-_text-rendering);
             }          
         `;
-     
-        content.id = "container";
-        content.className = "container";
-        card.header = config.title;
-        card.appendChild(style);
-        card.appendChild(content);
-        
-        root.appendChild(card);
-      }
-  
-    // The height of the card.
-    getCardSize() {
-      return 3;
-    }
+
+    content.id = "container";
+    content.className = "container";
+    card.header = config.title;
+    card.appendChild(style);
+    card.appendChild(content);
+
+    root.appendChild(card);
+  }
+
+  // The height of the card.
+  getCardSize() {
+    return 3;
+  }
 }
-  
-customElements.define('clockwork-card', ClockWorkCard);
+
+customElements.define("clockwork-card", ClockWorkCard);
